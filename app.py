@@ -9,7 +9,7 @@ from streamlit_extras.grid import grid
 
 
 def build_sidebar():
-    st.image("images/logo-250-100-transparente.png")
+    #st.image("images/logo-250-100-transparente.png")
     ticker_list = pd.read_csv("tickers_ibra.csv", index_col=0)
     tickers = st.multiselect(label="Selecione as Empresas", options=ticker_list, placeholder='Códigos')
     tickers = [t+".SA" for t in tickers]
@@ -83,6 +83,6 @@ st.set_page_config(layout="wide")
 with st.sidebar:
     tickers, prices = build_sidebar()
 
-st.title('Python para Investidores')
+st.title('Dash B3')
 if tickers:
     build_main(tickers, prices)
