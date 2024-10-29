@@ -9,7 +9,6 @@ from streamlit_extras.grid import grid
 
 
 def build_sidebar():
-    # st.image("images/logo-250-100-transparente.png")
     ticker_list = pd.read_csv("tickers_ibra.csv", index_col=0)
     tickers = st.multiselect(label="Selecione as Empresas", options=ticker_list, placeholder='Códigos')
     tickers = [t + ".SA" for t in tickers]
@@ -23,17 +22,16 @@ def build_sidebar():
             st.warning("Nenhum dado encontrado para os tickers e intervalo de datas selecionados.")
             return None, None
 
-        # Verificar se prices é uma Series (caso apenas um ticker seja selecionado) e transformá-la em DataFrame
         if isinstance(prices, pd.Series):
             prices = prices.to_frame()
             prices.columns = [tickers[0].rstrip(".SA")]
 
-        # Remover ".SA" dos nomes das colunas e adicionar coluna IBOV
         prices.columns = prices.columns.str.rstrip(".SA")
         prices['IBOV'] = yf.download("^BVSP", start=start_date, end=end_date)["Adj Close"]
 
         return tickers, prices
     return None, None
+
 
 def build_main(tickers, prices):
     weights = np.ones(len(tickers)) / len(tickers)
@@ -43,20 +41,37 @@ def build_main(tickers, prices):
     vols = returns.std() * np.sqrt(252)
     rets = (norm_prices.iloc[-1] - 100) / 100
 
+    # Layout configurado com grid
     mygrid = grid(5, 5, 5, 5, 5, 5, vertical_align="top")
-    for t in prices.columns:
-        c = mygrid.container(border=True)
-        c.subheader(t, divider="red")
-        colA, colB, colC = c.columns(3)
-        if t == "portfolio":
-            colA.image("images/pie-chart-dollar-svgrepo-com.svg")
-        elif t == "IBOV":
-            colA.image("images/pie-chart-svgrepo-com.svg")
-        else:
-            colA.image(f'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/{t}.png', width=85)
-        colB.metric(label="retorno", value=f"{rets[t]:.0%}")
-        colC.metric(label="volatilidade", value=f"{vols[t]:.0%}")
-        style_metric_cards(background_color='rgba(255,255,255,0)')
+    for i, t in enumerate(prices.columns):
+        c = mygrid[i % 5]  # Ajustando para exibir corretamente nas colunas
+        with c:
+            st.markdown(
+                f"""
+                <div style="
+                    background-color: #f8f9fa;
+                    padding: 10px;
+                    border-radius: 10px;
+                    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-around;">
+                    <div style="text-align: center;">
+                        <img src="{'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/' + t + '.png' if t not in ['IBOV', 'portfolio'] else 'images/pie-chart-svgrepo-com.svg' if t == 'IBOV' else 'images/pie-chart-dollar-svgrepo-com.svg'}" width="60" style="margin-right: 10px;"/>
+                        <h4 style="color: #007bff; margin: 5px 0 0;">{t}</h4>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.9em; font-weight: bold;">Retorno</span>
+                        <span style="color: #28a745; font-size: 1.2em;">{rets[t]:.0%}</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.9em; font-weight: bold;">Volatilidade</span>
+                        <span style="color: #dc3545; font-size: 1.2em;">{vols[t]:.0%}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True
+            )
+    style_metric_cards(background_color='rgba(255,255,255,0)')
 
     col1, col2 = st.columns(2, gap='large')
     with col1:
@@ -85,7 +100,7 @@ def build_main(tickers, prices):
         fig.layout.coloraxis.colorbar.title = 'Sharpe'
         st.plotly_chart(fig, use_container_width=True)
 
-        
+
 st.set_page_config(layout="wide")
 
 with st.sidebar:
