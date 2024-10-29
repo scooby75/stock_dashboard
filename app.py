@@ -5,8 +5,6 @@ import yfinance as yf
 import plotly.express as px
 from datetime import datetime
 from streamlit_extras.metric_cards import style_metric_cards
-from streamlit_extras.grid import grid
-
 
 def build_sidebar():
     ticker_list = pd.read_csv("tickers_ibra.csv", index_col=0)
@@ -32,7 +30,6 @@ def build_sidebar():
         return tickers, prices
     return None, None
 
-
 def build_main(tickers, prices):
     weights = np.ones(len(tickers)) / len(tickers)
     prices['portfolio'] = prices.drop("IBOV", axis=1) @ weights
@@ -41,34 +38,44 @@ def build_main(tickers, prices):
     vols = returns.std() * np.sqrt(252)
     rets = (norm_prices.iloc[-1] - 100) / 100
 
-    # Configuração de layout usando grid com contêineres individuais
-    for t in prices.columns:
-        with st.container():  # Usando contêineres para cada elemento
-            st.markdown(
-                f"""
-                <div style="
-                    background-color: #f8f9fa;
-                    padding: 10px;
-                    border-radius: 10px;
-                    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-around;">
-                    <div style="text-align: center;">
-                        <img src="{'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/' + t + '.png' if t not in ['IBOV', 'portfolio'] else 'images/pie-chart-svgrepo-com.svg' if t == 'IBOV' else 'images/pie-chart-dollar-svgrepo-com.svg'}" width="60" style="margin-right: 10px;"/>
-                        <h4 style="color: #007bff; margin: 5px 0 0;">{t}</h4>
+    # Configuração de layout para exibir 4 elementos por linha
+    cols_per_row = 4
+    rows = len(prices.columns) // cols_per_row + (len(prices.columns) % cols_per_row > 0)
+
+    for row in range(rows):
+        cols = st.columns(cols_per_row)
+        for i in range(cols_per_row):
+            idx = row * cols_per_row + i
+            if idx >= len(prices.columns):
+                break  # Finaliza se não houver mais itens
+
+            t = prices.columns[idx]
+            with cols[i]:
+                st.markdown(
+                    f"""
+                    <div style="
+                        background-color: #f8f9fa;
+                        padding: 10px;
+                        border-radius: 10px;
+                        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-around;">
+                        <div style="text-align: center;">
+                            <img src="{'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/' + t + '.png' if t not in ['IBOV', 'portfolio'] else 'images/pie-chart-svgrepo-com.svg' if t == 'IBOV' else 'images/pie-chart-dollar-svgrepo-com.svg'}" width="60" style="margin-right: 10px;"/>
+                            <h4 style="color: #007bff; margin: 5px 0 0;">{t}</h4>
+                        </div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 0.9em; font-weight: bold;">Retorno</span>
+                            <span style="color: #28a745; font-size: 1.2em;">{rets[t]:.0%}</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 0.9em; font-weight: bold;">Volatilidade</span>
+                            <span style="color: #dc3545; font-size: 1.2em;">{vols[t]:.0%}</span>
+                        </div>
                     </div>
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-size: 0.9em; font-weight: bold;">Retorno</span>
-                        <span style="color: #28a745; font-size: 1.2em;">{rets[t]:.0%}</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column;">
-                        <span style="font-size: 0.9em; font-weight: bold;">Volatilidade</span>
-                        <span style="color: #dc3545; font-size: 1.2em;">{vols[t]:.0%}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True
-            )
+                    """, unsafe_allow_html=True
+                )
     style_metric_cards(background_color='rgba(255,255,255,0)')
 
     col1, col2 = st.columns(2, gap='large')
@@ -97,7 +104,6 @@ def build_main(tickers, prices):
         fig.layout.yaxis.tickformat = ".0%"
         fig.layout.coloraxis.colorbar.title = 'Sharpe'
         st.plotly_chart(fig, use_container_width=True)
-
 
 st.set_page_config(layout="wide")
 
