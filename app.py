@@ -22,12 +22,10 @@ def build_sidebar():
             st.warning("Nenhum dado encontrado para os tickers e intervalo de datas selecionados.")
             return None, None
 
-        # Verificar se prices é uma Series (caso apenas um ticker seja selecionado) e transformá-la em DataFrame
         if isinstance(prices, pd.Series):
             prices = prices.to_frame()
             prices.columns = [tickers[0].rstrip(".SA")]
 
-        # Remover ".SA" dos nomes das colunas e adicionar coluna IBOV
         prices.columns = prices.columns.str.rstrip(".SA")
         prices['IBOV'] = yf.download("^BVSP", start=start_date, end=end_date)["Adj Close"]
 
@@ -53,11 +51,11 @@ def build_main(tickers, prices):
 
     # Ajuste do Grid
     columns_per_row = min(4, len(tickers) + 1)  # Máximo de 4 colunas por linha para melhor visualização
-    mygrid = grid(*[1]*columns_per_row, vertical_align="top")
-    for i, t in enumerate(prices.columns):
-        c = mygrid[i % columns_per_row]
-        c.subheader(t, divider="red")
-        colA, colB, colC = c.columns(3)
+    mygrid = grid(*[1] * columns_per_row, vertical_align="top")
+
+    for t, container in zip(prices.columns, mygrid):
+        container.subheader(t, divider="red")
+        colA, colB, colC = container.columns(3)
         if t == "portfolio":
             colA.image("images/pie-chart-dollar-svgrepo-com.svg")
         elif t == "IBOV":
