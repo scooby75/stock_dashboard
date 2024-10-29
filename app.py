@@ -41,11 +41,9 @@ def build_main(tickers, prices):
     vols = returns.std() * np.sqrt(252)
     rets = (norm_prices.iloc[-1] - 100) / 100
 
-    # Layout configurado com grid
-    mygrid = grid(5, 5, 5, 5, 5, 5, vertical_align="top")
-    for i, t in enumerate(prices.columns):
-        c = mygrid[i % 5]  # Ajustando para exibir corretamente nas colunas
-        with c:
+    # Configuração de layout usando grid com contêineres individuais
+    for t in prices.columns:
+        with st.container():  # Usando contêineres para cada elemento
             st.markdown(
                 f"""
                 <div style="
