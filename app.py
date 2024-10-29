@@ -9,33 +9,41 @@ from streamlit_extras.grid import grid
 
 
 def build_sidebar():
-    #st.image("images/logo-250-100-transparente.png")
+    # st.image("images/logo-250-100-transparente.png")
     ticker_list = pd.read_csv("tickers_ibra.csv", index_col=0)
     tickers = st.multiselect(label="Selecione as Empresas", options=ticker_list, placeholder='Códigos')
-    tickers = [t+".SA" for t in tickers]
-    start_date = st.date_input("De", format="DD/MM/YYYY", value=datetime(2023,1,2))
-    end_date = st.date_input("Até", format="DD/MM/YYYY", value="today")
+    tickers = [t + ".SA" for t in tickers]
+    start_date = st.date_input("De", format="DD/MM/YYYY", value=datetime(2023, 1, 2))
+    end_date = st.date_input("Até", format="DD/MM/YYYY", value=datetime.today())
 
     if tickers:
         prices = yf.download(tickers, start=start_date, end=end_date)["Adj Close"]
-        if len(tickers) == 1:
+
+        if prices.empty:
+            st.warning("Nenhum dado encontrado para os tickers e intervalo de datas selecionados.")
+            return None, None
+
+        # Verificar se prices é uma Series (caso apenas um ticker seja selecionado) e transformá-la em DataFrame
+        if isinstance(prices, pd.Series):
             prices = prices.to_frame()
             prices.columns = [tickers[0].rstrip(".SA")]
-                    
+
+        # Remover ".SA" dos nomes das colunas e adicionar coluna IBOV
         prices.columns = prices.columns.str.rstrip(".SA")
         prices['IBOV'] = yf.download("^BVSP", start=start_date, end=end_date)["Adj Close"]
+
         return tickers, prices
     return None, None
 
 def build_main(tickers, prices):
-    weights = np.ones(len(tickers))/len(tickers)
+    weights = np.ones(len(tickers)) / len(tickers)
     prices['portfolio'] = prices.drop("IBOV", axis=1) @ weights
     norm_prices = 100 * prices / prices.iloc[0]
     returns = prices.pct_change()[1:]
-    vols = returns.std()*np.sqrt(252)
+    vols = returns.std() * np.sqrt(252)
     rets = (norm_prices.iloc[-1] - 100) / 100
 
-    mygrid = grid(5 ,5 ,5 ,5 ,5 , 5, vertical_align="top")
+    mygrid = grid(5, 5, 5, 5, 5, 5, vertical_align="top")
     for t in prices.columns:
         c = mygrid.container(border=True)
         c.subheader(t, divider="red")
@@ -61,19 +69,19 @@ def build_main(tickers, prices):
             x=vols,
             y=rets,
             text=vols.index,
-            color=rets/vols,
+            color=rets / vols,
             color_continuous_scale=px.colors.sequential.Bluered_r
         )
         fig.update_traces(
-            textfont_color='white', 
+            textfont_color='white',
             marker=dict(size=45),
-            textfont_size=10,                  
+            textfont_size=10,
         )
         fig.layout.yaxis.title = 'Retorno Total'
         fig.layout.xaxis.title = 'Volatilidade (anualizada)'
         fig.layout.height = 600
         fig.layout.xaxis.tickformat = ".0%"
-        fig.layout.yaxis.tickformat = ".0%"        
+        fig.layout.yaxis.tickformat = ".0%"
         fig.layout.coloraxis.colorbar.title = 'Sharpe'
         st.plotly_chart(fig, use_container_width=True)
 
