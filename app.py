@@ -7,6 +7,7 @@ from datetime import datetime
 from streamlit_extras.metric_cards import style_metric_cards
 from streamlit_extras.grid import grid
 
+
 def build_sidebar():
     # st.image("images/logo-250-100-transparente.png")
     ticker_list = pd.read_csv("tickers_ibra.csv", index_col=0)
@@ -22,10 +23,12 @@ def build_sidebar():
             st.warning("Nenhum dado encontrado para os tickers e intervalo de datas selecionados.")
             return None, None
 
+        # Verificar se prices é uma Series (caso apenas um ticker seja selecionado) e transformá-la em DataFrame
         if isinstance(prices, pd.Series):
             prices = prices.to_frame()
             prices.columns = [tickers[0].rstrip(".SA")]
 
+        # Remover ".SA" dos nomes das colunas e adicionar coluna IBOV
         prices.columns = prices.columns.str.rstrip(".SA")
         prices['IBOV'] = yf.download("^BVSP", start=start_date, end=end_date)["Adj Close"]
 
@@ -40,33 +43,21 @@ def build_main(tickers, prices):
     vols = returns.std() * np.sqrt(252)
     rets = (norm_prices.iloc[-1] - 100) / 100
 
-    # Exibir uma tabela interativa com dados de retorno e volatilidade
-    st.subheader("Tabela de Retorno e Volatilidade")
-    summary_df = pd.DataFrame({
-        'Ticker': prices.columns,
-        'Retorno (%)': rets.values * 100,
-        'Volatilidade (%)': vols.values * 100
-    }).set_index('Ticker')
-    st.dataframe(summary_df.style.format({'Retorno (%)': "{:.2f}", 'Volatilidade (%)': "{:.2f}"}))
-
-    # Ajuste do Grid
-    columns_per_row = min(4, len(tickers) + 1)  # Máximo de 4 colunas por linha para melhor visualização
-    mygrid = grid(*[1] * columns_per_row, vertical_align="top")
-
-    for t, container in zip(prices.columns, mygrid):
-        container.subheader(t, divider="red")
-        colA, colB, colC = container.columns(3)
+    mygrid = grid(5, 5, 5, 5, 5, 5, vertical_align="top")
+    for t in prices.columns:
+        c = mygrid.container(border=True)
+        c.subheader(t, divider="red")
+        colA, colB, colC = c.columns(3)
         if t == "portfolio":
             colA.image("images/pie-chart-dollar-svgrepo-com.svg")
         elif t == "IBOV":
             colA.image("images/pie-chart-svgrepo-com.svg")
         else:
             colA.image(f'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/{t}.png', width=85)
-        colB.metric(label="Retorno", value=f"{rets[t]:.0%}")
-        colC.metric(label="Volatilidade", value=f"{vols[t]:.0%}")
+        colB.metric(label="retorno", value=f"{rets[t]:.0%}")
+        colC.metric(label="volatilidade", value=f"{vols[t]:.0%}")
         style_metric_cards(background_color='rgba(255,255,255,0)')
 
-    # Exibir gráficos
     col1, col2 = st.columns(2, gap='large')
     with col1:
         st.subheader("Desempenho Relativo")
@@ -94,7 +85,7 @@ def build_main(tickers, prices):
         fig.layout.coloraxis.colorbar.title = 'Sharpe'
         st.plotly_chart(fig, use_container_width=True)
 
-
+        
 st.set_page_config(layout="wide")
 
 with st.sidebar:
