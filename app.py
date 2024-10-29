@@ -7,7 +7,6 @@ from datetime import datetime
 from streamlit_extras.metric_cards import style_metric_cards
 from streamlit_extras.grid import grid
 
-
 def build_sidebar():
     # st.image("images/logo-250-100-transparente.png")
     ticker_list = pd.read_csv("tickers_ibra.csv", index_col=0)
@@ -43,9 +42,20 @@ def build_main(tickers, prices):
     vols = returns.std() * np.sqrt(252)
     rets = (norm_prices.iloc[-1] - 100) / 100
 
-    mygrid = grid(5, 5, 5, 5, 5, 5, vertical_align="top")
-    for t in prices.columns:
-        c = mygrid.container(border=True)
+    # Exibir uma tabela interativa com dados de retorno e volatilidade
+    st.subheader("Tabela de Retorno e Volatilidade")
+    summary_df = pd.DataFrame({
+        'Ticker': prices.columns,
+        'Retorno (%)': rets.values * 100,
+        'Volatilidade (%)': vols.values * 100
+    }).set_index('Ticker')
+    st.dataframe(summary_df.style.format({'Retorno (%)': "{:.2f}", 'Volatilidade (%)': "{:.2f}"}))
+
+    # Ajuste do Grid
+    columns_per_row = min(4, len(tickers) + 1)  # Máximo de 4 colunas por linha para melhor visualização
+    mygrid = grid(*[1]*columns_per_row, vertical_align="top")
+    for i, t in enumerate(prices.columns):
+        c = mygrid[i % columns_per_row]
         c.subheader(t, divider="red")
         colA, colB, colC = c.columns(3)
         if t == "portfolio":
@@ -54,10 +64,11 @@ def build_main(tickers, prices):
             colA.image("images/pie-chart-svgrepo-com.svg")
         else:
             colA.image(f'https://raw.githubusercontent.com/thefintz/icones-b3/main/icones/{t}.png', width=85)
-        colB.metric(label="retorno", value=f"{rets[t]:.0%}")
-        colC.metric(label="volatilidade", value=f"{vols[t]:.0%}")
+        colB.metric(label="Retorno", value=f"{rets[t]:.0%}")
+        colC.metric(label="Volatilidade", value=f"{vols[t]:.0%}")
         style_metric_cards(background_color='rgba(255,255,255,0)')
 
+    # Exibir gráficos
     col1, col2 = st.columns(2, gap='large')
     with col1:
         st.subheader("Desempenho Relativo")
@@ -85,7 +96,7 @@ def build_main(tickers, prices):
         fig.layout.coloraxis.colorbar.title = 'Sharpe'
         st.plotly_chart(fig, use_container_width=True)
 
-        
+
 st.set_page_config(layout="wide")
 
 with st.sidebar:
